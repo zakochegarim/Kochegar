@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,16 +33,35 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Generate app icon from icon.png
+        run: |
+          if [ -f icon.png ]; then
+            mkdir -p assets
+            cp icon.png assets/icon.png
+            npx --yes @capacitor/assets generate --android \
+              || echo "WARN: не удалось сгенерировать иконку, останется стандартная"
+          else
+            echo "WARN: icon.png не найден, останется стандартная иконка"
+          fi
+
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Prepare keystore (if missing)
+      - name: Prepare keystore (создать один раз и сохранить в репозиторий)
         run: |
+          if [ -f app.keystore ]; then
+            keytool -list -keystore app.keystore -storepass android >/dev/null 2>&1 || rm -f app.keystore
+          fi
           if [ ! -f app.keystore ]; then
             keytool -genkeypair -v -keystore app.keystore -alias android \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass android -keypass android \
               -dname "CN=Kochegar, OU=Dev, O=Dev, L=City, ST=State, C=RU"
+            git config user.name "github-actions"
+            git config user.email "actions@users.noreply.github.com"
+            git add app.keystore
+            git commit -m "add app.keystore [skip ci]"
+            git push
           fi
 
       - name: Add signing config
