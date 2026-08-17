@@ -1,0 +1,8 @@
+{
+  "appId": "com.kochegar.app",
+  "appName": "Kochegar",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
